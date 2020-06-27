@@ -11,6 +11,7 @@ const fsMkdir = promisify(fs.mkdir)
 
 module.exports.server = async function (serv, { version, worldFolder, generation = { name: 'diamond_square', options: { worldHeight: 80 } } } = {}) {
   const World = require('prismarine-world')(version)
+  const mcData = require('minecraft-data')(version)
 
   const newSeed = generation.options.seed || Math.floor(Math.random() * Math.pow(2, 31))
   let seed
@@ -56,15 +57,12 @@ module.exports.server = async function (serv, { version, worldFolder, generation
     return Promise.all(promises)
   }
 
-  serv.setBlock = async (world, position, blockType, blockData) => {
+  serv.setBlock = async (world, position, stateId) => {
     serv.players
       .filter(p => p.world === world)
-      .forEach(player => player.sendBlock(position, blockType, blockData))
-
-    await world.setBlockType(position, blockType)
-    await world.setBlockData(position, blockData)
-
-    if (blockType === 0) serv.notifyNeighborsOfStateChange(world, position, serv.tickCount, serv.tickCount, true)
+      .forEach(player => player.sendBlock(position, stateId))
+    await world.setBlockStateId(position, stateId)
+    if (stateId === 0) serv.notifyNeighborsOfStateChange(world, position, serv.tickCount, serv.tickCount, true)
     else serv.updateBlock(world, position, serv.tickCount, serv.tickCount, true)
   }
 

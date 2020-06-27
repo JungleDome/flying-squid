@@ -56,6 +56,7 @@ module.exports.server = (serv, { version }) => {
 }
 
 module.exports.player = function (player, serv, { version }) {
+  const mcData = require('minecraft-data')(version)
   const blocks = require('minecraft-data')(version).blocks
 
   player._client.on('block_place', async ({ direction, location } = {}) => {
@@ -89,7 +90,7 @@ module.exports.player = function (player, serv, { version }) {
       reference: referencePosition,
       playSound: true,
       sound: 'dig.' + (materialToSound[blocks[id].material] || 'stone')
-    }, ({ position, playSound, sound, id, damage }) => {
+    }, ({ position, playSound, sound, id, damage, heldItem }) => {
       if (playSound) {
         serv.playSound(sound, player.world, placedPosition.clone().add(new Vec3(0.5, 0.5, 0.5)), {
           pitch: 0.8
@@ -97,8 +98,15 @@ module.exports.player = function (player, serv, { version }) {
       }
 
       if (player.gameMode === 0) { player.inventory.slots[36 + player.heldItemSlot]-- }
-
-      player.setBlock(position, id, damage)
+      var stateId;
+      console.log(mcData.blocksByName[heldItem.name])
+      if (serv.supportFeature("theFlattening")) {
+        if (mcData.blocksByName[heldItem.name].name == 'grass_block')
+          damage = 1;
+        stateId = mcData.blocksByName[heldItem.name].minStateId + damage
+      } else
+        stateId = id << 4 | damage
+      player.setBlock(position, stateId)
 
       if (id === 63 || id === 68) {
         player._client.write('open_sign_entity', {
